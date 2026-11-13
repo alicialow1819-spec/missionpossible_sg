@@ -1,13 +1,8 @@
 import type { Request, Response } from 'express';
 
 export default function handler(_req: Request, res: Response) {
-  const hasOneMapToken = Boolean(process.env.ONEMAP_TOKEN);
-  const hasOneMapCredentials = Boolean(
-    process.env.ONEMAP_EMAIL && process.env.ONEMAP_PASSWORD
-  );
-  const hasWhatsApp = Boolean(
-    process.env.WHATSAPP_PHONE_NUMBER_ID && process.env.WHATSAPP_ACCESS_TOKEN
-  );
+  const hasOneMapToken = Boolean(process.env.ONEMAPP_TOKEN?.trim());
+  const hasWhatsApp = Boolean(process.env.WHATSAPP_PHONE_NUMBERID?.trim());
 
   res.status(200).json({
     status: 'ok',
@@ -17,12 +12,8 @@ export default function handler(_req: Request, res: Response) {
     currency: 'SGD',
     integrations: {
       onemap: {
-        configured: hasOneMapToken || hasOneMapCredentials,
-        authMode: hasOneMapToken
-          ? 'static_token'
-          : hasOneMapCredentials
-            ? 'email_password_token_exchange'
-            : 'unconfigured',
+        configured: hasOneMapToken,
+        authMode: hasOneMapToken ? 'token' : 'unconfigured',
       },
       whatsapp: {
         configured: hasWhatsApp,

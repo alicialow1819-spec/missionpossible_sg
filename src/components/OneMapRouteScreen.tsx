@@ -261,10 +261,7 @@ export default function OneMapRouteScreen({
           <div>
             <p className="font-semibold">OneMap server credentials not yet configured</p>
             <p className="text-xs mt-1 leading-relaxed">
-              Add <code className="font-mono bg-amber-100 px-1 py-0.5 rounded">ONEMAP_EMAIL</code>{' '}
-              and{' '}
-              <code className="font-mono bg-amber-100 px-1 py-0.5 rounded">ONEMAP_PASSWORD</code>{' '}
-              (or <code className="font-mono bg-amber-100 px-1 py-0.5 rounded">ONEMAP_TOKEN</code>)
+              Add <code className="font-mono bg-amber-100 px-1 py-0.5 rounded">ONEMAPP_TOKEN</code>{' '}
               to your server environment variables to activate live routing responses from{' '}
               <code className="font-mono">/api/onemap</code>. No keys are stored in source code.
             </p>

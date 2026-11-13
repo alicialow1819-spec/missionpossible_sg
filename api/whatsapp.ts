@@ -17,15 +17,14 @@ export default async function handler(req: Request, res: Response) {
     return;
   }
 
-  const phoneNumberId = process.env.WHATSAPP_PHONE_NUMBER_ID?.trim();
-  const accessToken = process.env.WHATSAPP_ACCESS_TOKEN?.trim();
+  const phoneNumberId = process.env.WHATSAPP_PHONE_NUMBERID?.trim();
 
-  if (!phoneNumberId || !accessToken) {
+  if (!phoneNumberId) {
     res.status(503).json({
       ok: false,
       configured: false,
       error:
-        'WhatsApp Cloud API credentials are not configured yet. Set WHATSAPP_PHONE_NUMBER_ID and WHATSAPP_ACCESS_TOKEN in server environment variables.',
+        'WhatsApp Cloud API credentials are not configured yet. Set WHATSAPP_PHONE_NUMBERID in server environment variables.',
     });
     return;
   }
@@ -48,9 +47,7 @@ export default async function handler(req: Request, res: Response) {
     return;
   }
 
-  const templateName =
-    String(body.templateName ?? process.env.WHATSAPP_TEMPLATE_NAME ?? 'hello_world').trim() ||
-    'hello_world';
+  const templateName = String(body.templateName ?? 'hello_world').trim() || 'hello_world';
   const languageCode = String(body.languageCode ?? 'en_US').trim() || 'en_US';
 
   const whatsappPayload = {
@@ -71,7 +68,6 @@ export default async function handler(req: Request, res: Response) {
     const waResp = await fetch(endpoint, {
       method: 'POST',
       headers: {
-        Authorization: `Bearer ${accessToken}`,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify(whatsappPayload),

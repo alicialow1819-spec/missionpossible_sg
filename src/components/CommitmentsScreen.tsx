@@ -238,11 +238,7 @@ export default function CommitmentsScreen({
                 <p className="mt-1">
                   Set{' '}
                   <code className="font-mono bg-amber-100 px-1 py-0.5 rounded">
-                    WHATSAPP_PHONE_NUMBER_ID
-                  </code>{' '}
-                  and{' '}
-                  <code className="font-mono bg-amber-100 px-1 py-0.5 rounded">
-                    WHATSAPP_ACCESS_TOKEN
+                    WHATSAPP_PHONE_NUMBERID
                   </code>{' '}
                   in your server environment to send live messages.
                 </p>
