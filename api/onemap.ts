@@ -1,9 +1,74 @@
 import type { Request, Response } from 'express';
 
+const ONEMAP_TOKEN_URL = 'https://www.onemap.gov.sg/api/auth/post/getToken';
 const ONEMAP_ROUTE_URL = 'https://www.onemap.gov.sg/api/public/routingsvc/route';
+
+interface CachedToken {
+  accessToken: string;
+  expiresAtMs: number;
+}
+
+let cachedToken: CachedToken | null = null;
 
 function isValidCoordPair(value: string): boolean {
   return /^-?\d+(\.\d+)?,-?\d+(\.\d+)?$/.test(value.trim());
+}
+
+async function resolveOneMapToken(): Promise<string> {
+  const directToken = process.env.ONEMAPP_TOKEN?.trim();
+  if (directToken) {
+    return directToken;
+  }
+
+  const now = Date.now();
+  // Refresh 1 hour prior to 3-day expiry
+  if (cachedToken && cachedToken.expiresAtMs - 3600_000 > now) {
+    return cachedToken.accessToken;
+  }
+
+  const email = process.env.ONEMAP_EMAIL?.trim();
+  const password = process.env.ONEMAP_PASSWORD;
+
+  if (!email || !password) {
+    throw new Error('MISSING_CREDENTIALS');
+  }
+
+  const tokenResp = await fetch(ONEMAP_TOKEN_URL, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ email, password }),
+  });
+
+  const tokenData = (await tokenResp.json().catch(() => ({}))) as {
+    access_token?: string;
+    expiry_timestamp?: string | number;
+    error?: string;
+    message?: string;
+  };
+
+  if (!tokenResp.ok || !tokenData.access_token) {
+    throw new Error(
+      tokenData.error ||
+        tokenData.message ||
+        `OneMap auth failed with HTTP ${tokenResp.status}`
+    );
+  }
+
+  // OneMap expiry_timestamp is Unix seconds (3 days)
+  const expirySeconds = Number(tokenData.expiry_timestamp);
+  const expiresAtMs =
+    Number.isFinite(expirySeconds) && expirySeconds > 0
+      ? expirySeconds * 1000
+      : now + 3 * 24 * 60 * 60 * 1000;
+
+  cachedToken = {
+    accessToken: tokenData.access_token,
+    expiresAtMs,
+  };
+
+  return cachedToken.accessToken;
 }
 
 function formatSgDateForTransit(): string {
@@ -65,13 +130,24 @@ export default async function handler(req: Request, res: Response) {
     return;
   }
 
-  const token = process.env.ONEMAPP_TOKEN?.trim();
-  if (!token) {
-    res.status(503).json({
+  let token: string;
+  try {
+    token = await resolveOneMapToken();
+  } catch (err) {
+    const message = err instanceof Error ? err.message : 'Unable to resolve OneMap token.';
+    if (message === 'MISSING_CREDENTIALS') {
+      res.status(503).json({
+        ok: false,
+        configured: false,
+        error:
+          'OneMap credentials are not configured yet. Set ONEMAPP_TOKEN in server environment variables.',
+      });
+      return;
+    }
+    res.status(502).json({
       ok: false,
-      configured: false,
-      error:
-        'OneMap credentials are not configured yet. Set ONEMAPP_TOKEN in server environment variables.',
+      configured: true,
+      error: `OneMap authentication error: ${message}`,
     });
     return;
   }
@@ -101,6 +177,10 @@ export default async function handler(req: Request, res: Response) {
     const payload = await routeResp.json().catch(() => ({}));
 
     if (!routeResp.ok) {
+      // Clear cached token if unauthorized so next request refreshes
+      if (routeResp.status === 401 || routeResp.status === 403) {
+        cachedToken = null;
+      }
       res.status(routeResp.status).json({
         ok: false,
         configured: true,
